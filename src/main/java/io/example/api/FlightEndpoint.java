@@ -3,6 +3,7 @@ package io.example.api;
 import java.util.Collections;
 
 import io.example.application.BookingSlotEntity;
+import io.example.application.ParticipantSlotsView;
 import io.example.domain.Participant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -91,10 +92,18 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
     // Used to retrieve bookings and slots in which the participant is available
     @Get("/slots/{participantId}/{status}")
     public SlotList slotsByStatus(String participantId, String status) {
-
+        SlotList slotList;
         // Add view query
+        try {
+            slotList = componentClient
+                    .forView()
+                    .method(ParticipantSlotsView::getSlotsByParticipantAndStatus)
+                    .invoke(new ParticipantSlotsView.ParticipantStatusInput(participantId, status));
+        } catch (Exception e) { // TODO catch specific error of when participant not found
+            throw new RuntimeException(e);
+        }
 
-        return new SlotList(Collections.emptyList());
+        return slotList;
     }
 
     // Returns the internal availability state for a given slot
@@ -102,6 +111,14 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
     public Timeslot getSlot(String slotId) {
 
         // Add entity state request
+        try {
+            componentClient
+                    .forEventSourcedEntity(slotId)
+                    .method(BookingSlotEntity::getSlot)
+                    .invoke();
+        } catch (RuntimeException e) { // TODO: catch not found
+            throw new RuntimeException(e);
+        }
 
         return new Timeslot(Collections.emptySet(),
                 Collections.emptySet());
@@ -147,7 +164,15 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
             throw HttpException.badRequest("invalid participant type");
         }
 
-        // Add codce to unmark slot as available
+        // Add code to unmark slot as available
+        try {
+            componentClient
+                    .forEventSourcedEntity(slotId)
+                    .method(BookingSlotEntity::unmarkSlotAvailable)
+                    .invoke(new BookingSlotEntity.Command.UnmarkSlotAvailable(new Participant(request.participantId, participantType)));
+        } catch (RuntimeException ex) { // TODO: change to specific exception e.g. ParticipantNotFound
+            throw new RuntimeException(ex.getMessage());
+        }
 
         return HttpResponses.ok();
     }
