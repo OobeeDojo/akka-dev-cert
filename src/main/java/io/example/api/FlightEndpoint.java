@@ -55,7 +55,12 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
         }
 
         try {
-            // TODO
+            componentClient
+                    .forEventSourcedEntity(slotId)
+                    .method(BookingSlotEntity::bookSlot)
+                    .invoke(new BookingSlotEntity.Command.BookReservation(
+                            studentId, aircraftId, instructorId, bookingId
+                    ));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -70,6 +75,14 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
         log.info("Canceling booking id {}", bookingId);
 
         // Add booking cancellation code
+        try {
+            componentClient
+                    .forEventSourcedEntity(slotId)
+                    .method(BookingSlotEntity::cancelBooking)
+                    .invoke(bookingId);
+        } catch (RuntimeException e) {
+            throw new RuntimeException(e);
+        }
 
         return HttpResponses.ok();
     }
@@ -115,9 +128,9 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
             componentClient
                     .forEventSourcedEntity(slotId)
                     .method(BookingSlotEntity::markSlotAvailable)
-                    .invoke(new BookingSlotEntity.Command.MarkSlotAvailable(new Participant(participantId, participantType)))
+                    .invoke(new BookingSlotEntity.Command.MarkSlotAvailable(new Participant(participantId, participantType)));
         } catch (RuntimeException ex) {
-            log.error("Failed to mark available {}", ex.getMessage());
+            throw new RuntimeException(ex.getMessage());
         }
 
         return HttpResponses.ok();
