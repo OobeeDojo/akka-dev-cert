@@ -112,7 +112,36 @@ public class BookingSlotEntity extends EventSourcedEntity<Timeslot, BookingEvent
     // NOTE: canceling a booking should produce 3
     // `ParticipantCanceled` events
     public Effect<Done> cancelBooking(String bookingId) {
-        return effects().error("not yet implemented");
+
+        if (currentState() == null) {
+            return effects().error("Timeslot does not exist.");
+        }
+
+        var bookingList = currentState().findBooking(bookingId);
+
+        if (bookingList.isEmpty()) {
+            return effects().error("Booking does not exist.");
+        }
+
+        List<BookingEvent> eventsToPersist = new ArrayList<>();
+
+        for (Timeslot.Booking booking : bookingList) {
+            eventsToPersist.add(new BookingEvent.ParticipantCanceled(
+                    commandContext().entityId(),
+                    booking.participant().id(),
+                    booking.participant().participantType(),
+                    bookingId
+            ));
+        }
+
+        try {
+        return effects()
+                .persist(eventsToPersist.get(0),eventsToPersist.get(1),eventsToPersist.get(2))
+                .thenReply(newState -> Done.getInstance());
+        } catch (NoSuchElementException e) {
+            return effects().error("Only 3 participants found in booking.");
+        }
+
 
     }
 
