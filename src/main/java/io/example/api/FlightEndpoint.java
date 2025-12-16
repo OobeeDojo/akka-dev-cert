@@ -2,6 +2,8 @@ package io.example.api;
 
 import java.util.Collections;
 
+import io.example.application.BookingSlotEntity;
+import io.example.domain.Participant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,6 +99,7 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
     @Post("/availability/{slotId}")
     public HttpResponse markAvailable(String slotId, AvailabilityRequest request) {
         ParticipantType participantType;
+        var participantId = request.participantId;
 
         try {
             participantType = ParticipantType.valueOf(request.participantType().trim().toUpperCase());
@@ -108,6 +111,14 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
         log.info("Marking timeslot available for entity {}", slotId);
 
         // Add entity client to mark slot available
+        try {
+            componentClient
+                    .forEventSourcedEntity(slotId)
+                    .method(BookingSlotEntity::markSlotAvailable)
+                    .invoke(new BookingSlotEntity.Command.MarkSlotAvailable(new Participant(participantId, participantType)))
+        } catch (RuntimeException ex) {
+            log.error("Failed to mark available {}", ex.getMessage());
+        }
 
         return HttpResponses.ok();
     }
