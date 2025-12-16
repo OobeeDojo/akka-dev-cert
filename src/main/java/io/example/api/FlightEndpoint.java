@@ -39,6 +39,25 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
 
         // Implementation here
 
+        // check request is correct
+        String studentId = request.studentId;
+        String aircraftId = request.aircraftId;
+        String instructorId = request.instructorId;
+        String bookingId = request.bookingId;
+
+        if (studentId == null ||
+            aircraftId == null ||
+            instructorId == null ||
+            bookingId == null) {
+            return HttpResponses.badRequest();
+        }
+
+        try {
+            // TODO
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
         return HttpResponses.created();
     }
 
