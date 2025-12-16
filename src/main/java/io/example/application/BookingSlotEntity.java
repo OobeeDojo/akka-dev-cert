@@ -22,7 +22,23 @@ public class BookingSlotEntity extends EventSourcedEntity<Timeslot, BookingEvent
     }
 
     public Effect<Done> markSlotAvailable(Command.MarkSlotAvailable cmd) {
-        return effects().error("not yet implemented");
+        logger.info("Marking slot available");
+
+        if (currentState() == null) {
+            return effects().error("Timeslot does not exist.");
+        }
+
+        var participant = cmd.participant();
+        var event = new BookingEvent.ParticipantMarkedAvailable(
+                commandContext().entityId(),
+                participant.id(),
+                participant.participantType());
+
+        return effects()
+                .persist(event)
+                .thenReply(newState -> Done.getInstance());
+
+
     }
 
     public Effect<Done> unmarkSlotAvailable(Command.UnmarkSlotAvailable cmd) {
@@ -57,6 +73,28 @@ public class BookingSlotEntity extends EventSourcedEntity<Timeslot, BookingEvent
     public Timeslot applyEvent(BookingEvent event) {
         // Supply your own implementation to update state based
         // on the event
+        switch (event) {
+            case BookingEvent.ParticipantMarkedAvailable evt ->
+                currentState().reserve(new BookingEvent.ParticipantMarkedAvailable(
+                        evt.slotId(),
+                        evt.participantId(),
+                        evt.participantType()));
+            case BookingEvent.ParticipantUnmarkedAvailable evt ->
+                currentState().unreserve(new BookingEvent.ParticipantUnmarkedAvailable(
+                        evt.slotId(),
+                        evt.participantId(),
+                        evt.participantType()
+                ));
+            case BookingEvent.ParticipantBooked evt ->
+                currentState().book(new BookingEvent.ParticipantBooked(
+                        evt.slotId(),
+                        evt.participantId(),
+                        evt.participantType(),
+                        evt.bookingId()
+                ));
+            case BookingEvent.ParticipantCanceled evt ->
+                currentState().cancelBooking(evt.bookingId());
+        }
         return currentState();
     }
 
