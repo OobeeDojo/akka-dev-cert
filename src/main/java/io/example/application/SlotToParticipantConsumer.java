@@ -5,6 +5,7 @@ import akka.javasdk.annotations.Consume;
 import akka.javasdk.client.ComponentClient;
 import akka.javasdk.consumer.Consumer;
 import io.example.domain.BookingEvent;
+import io.example.domain.Participant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,7 +24,36 @@ public class SlotToParticipantConsumer extends Consumer {
     }
 
     public Effect onEvent(BookingEvent event) {
-        // Supply your own implementation
+        switch (event) {
+            case BookingEvent.ParticipantBooked booked ->
+                    client
+                            .forEventSourcedEntity(participantSlotId(booked))
+                            .method(ParticipantSlotEntity::book)
+                            .invoke(new ParticipantSlotEntity.Commands.Book(
+                                    booked.slotId(), booked.participantId(), booked.participantType(), booked.bookingId()
+                            ));
+            case BookingEvent.ParticipantCanceled cancelled ->
+                    client
+                            .forEventSourcedEntity(participantSlotId(cancelled))
+                            .method(ParticipantSlotEntity::cancel)
+                            .invoke(new ParticipantSlotEntity.Commands.Cancel(
+                                    cancelled.slotId(), cancelled.participantId(), cancelled.participantType(), cancelled.bookingId()
+                            ));
+            case BookingEvent.ParticipantMarkedAvailable markedAvailable ->
+                    client
+                            .forEventSourcedEntity(participantSlotId(markedAvailable))
+                            .method(ParticipantSlotEntity::markAvailable)
+                            .invoke(new ParticipantSlotEntity.Commands.MarkAvailable(
+                                    markedAvailable.slotId(), markedAvailable.participantId(), markedAvailable.participantType()
+                            ));
+            case  BookingEvent.ParticipantUnmarkedAvailable unmarkedAvailable ->
+                    client
+                            .forEventSourcedEntity(participantSlotId(unmarkedAvailable))
+                            .method(ParticipantSlotEntity::unmarkAvailable)
+                            .invoke(new ParticipantSlotEntity.Commands.UnmarkAvailable(
+                                    unmarkedAvailable.slotId(),  unmarkedAvailable.participantId(), unmarkedAvailable.participantType()
+                            ));
+        }
         return effects().done();
     }
 
@@ -35,7 +65,7 @@ public class SlotToParticipantConsumer extends Consumer {
         return switch (event) {
             case BookingEvent.ParticipantBooked evt -> evt.slotId() + "-" + evt.participantId();
             case BookingEvent.ParticipantUnmarkedAvailable evt ->
-                evt.slotId() + "-" + evt.participantId();
+                    evt.slotId() + "-" + evt.participantId();
             case BookingEvent.ParticipantMarkedAvailable evt -> evt.slotId() + "-" + evt.participantId();
             case BookingEvent.ParticipantCanceled evt -> evt.slotId() + "-" + evt.participantId();
         };
