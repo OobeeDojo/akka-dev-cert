@@ -1,8 +1,13 @@
 package io.example.api;
 
 import java.util.Collections;
+import java.util.UUID;
 
+import akka.javasdk.agent.ModelTimeoutException;
+import akka.javasdk.agent.RateLimitException;
+import akka.javasdk.agent.ToolCallExecutionException;
 import io.example.application.BookingSlotEntity;
+import io.example.application.FlightConditionsAgent;
 import io.example.application.ParticipantSlotsView;
 import io.example.domain.Participant;
 import org.slf4j.Logger;
@@ -40,8 +45,6 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
     public HttpResponse createBooking(String slotId, BookingRequest request) {
         log.info("Creating booking for slot {}: {}", slotId, request);
 
-        // Implementation here
-
         // check request is correct
         String studentId = request.studentId;
         String aircraftId = request.aircraftId;
@@ -56,6 +59,25 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
         }
 
         try {
+            var sessionId = UUID.randomUUID().toString();
+            var agentJudgement = componentClient
+                    .forAgent()
+                    .inSession(sessionId)
+                    .method(FlightConditionsAgent::query)
+                    .invoke(slotId);
+            if (!agentJudgement.meetsRequirements()) {
+                 return HttpResponses.badRequest("Weather conditions are unsuitable. Cannot create booking.");
+            }
+        } catch (RateLimitException |
+                 ModelTimeoutException |
+                 ToolCallExecutionException ex) {
+            return HttpResponses.badRequest(ex.getMessage());
+        } catch (RuntimeException ex) {
+            return HttpResponses.internalServerError(ex.getMessage());
+        }
+
+
+        try {
             componentClient
                     .forEventSourcedEntity(slotId)
                     .method(BookingSlotEntity::bookSlot)
@@ -65,8 +87,6 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        // TODO: Make sure to get a flight conditions report from the AI agent and use that
-        // to decide if the booking can be created
 
         return HttpResponses.created();
     }
@@ -192,4 +212,5 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
     // Public API representation of an availability mark/unmark request
     public record AvailabilityRequest(String participantId, String participantType) {
     }
+
 }

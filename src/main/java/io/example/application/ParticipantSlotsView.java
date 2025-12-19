@@ -26,12 +26,12 @@ public class ParticipantSlotsView extends View {
             logger.info("Received event {}", event);
             switch (event) {
                 case MarkedAvailable evt -> {
-                    SlotRow slotRow = new SlotRow(evt.slotId(), evt.participantId(), evt.participantType().toString(), "", "marked-available");
+                    SlotRow slotRow = new SlotRow(evt.slotId(), evt.participantId(), evt.participantType().toString(), "", "available");
                     return effects()
                             .updateRow(slotRow);
                 }
                 case UnmarkedAvailable evt -> {
-                    SlotRow slotRow = new SlotRow(evt.slotId(), evt.participantId(), evt.participantType().toString(), "", "marked-unavailable");
+                    SlotRow slotRow = new SlotRow(evt.slotId(), evt.participantId(), evt.participantType().toString(), "", "unavailable");
                     return effects()
                             .updateRow(slotRow);
                 }
@@ -41,7 +41,7 @@ public class ParticipantSlotsView extends View {
                             .updateRow(slotRow);
                 }
                 case Canceled evt -> {
-                    SlotRow slotRow = new SlotRow(evt.slotId(), evt.participantId(), evt.participantType().toString(), evt.bookingId(), "canceled");
+                    SlotRow slotRow = new SlotRow(evt.slotId(), evt.participantId(), evt.participantType().toString(), evt.bookingId(), "available");
                     return effects()
                             .updateRow(slotRow);
                 }
