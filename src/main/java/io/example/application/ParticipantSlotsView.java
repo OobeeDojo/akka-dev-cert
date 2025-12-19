@@ -23,7 +23,29 @@ public class ParticipantSlotsView extends View {
 
         public Effect<SlotRow> onEvent(ParticipantSlotEntity.Event event) {
             // Supply your own implementation
-            return effects().ignore();
+            logger.info("Received event {}", event);
+            switch (event) {
+                case MarkedAvailable evt -> {
+                    SlotRow slotRow = new SlotRow(evt.slotId(), evt.participantId(), evt.participantType().toString(), "", "marked-available");
+                    return effects()
+                            .updateRow(slotRow);
+                }
+                case UnmarkedAvailable evt -> {
+                    SlotRow slotRow = new SlotRow(evt.slotId(), evt.participantId(), evt.participantType().toString(), "", "marked-unavailable");
+                    return effects()
+                            .updateRow(slotRow);
+                }
+                case Booked evt -> {
+                    SlotRow slotRow = new SlotRow(evt.slotId(), evt.participantId(), evt.participantType().toString(), evt.bookingId(), "booked");
+                    return effects()
+                            .updateRow(slotRow);
+                }
+                case Canceled evt -> {
+                    SlotRow slotRow = new SlotRow(evt.slotId(), evt.participantId(), evt.participantType().toString(), evt.bookingId(), "canceled");
+                    return effects()
+                            .updateRow(slotRow);
+                }
+            }
         }
     }
 
@@ -41,12 +63,12 @@ public class ParticipantSlotsView extends View {
     public record SlotList(List<SlotRow> slots) {
     }
 
-    // @Query("SELECT .... ")
+     @Query("SELECT * FROM slots_by_participant WHERE participantId = :participantId")
     public QueryEffect<SlotList> getSlotsByParticipant(String participantId) {
         return queryResult();
     }
 
-    // @Query("SELECT ...")
+     @Query("SELECT * FROM slots_by_participant_and_status WHERE participantStatusInput = :input")
     public QueryEffect<SlotList> getSlotsByParticipantAndStatus(ParticipantStatusInput input) {
         return queryResult();
     }
