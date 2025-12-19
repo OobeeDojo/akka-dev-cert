@@ -112,9 +112,12 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
     @Get("/availability/{slotId}")
     public Timeslot getSlot(String slotId) {
 
+        var timeslot = new Timeslot(Collections.emptySet(),
+                Collections.emptySet());
+
         // Add entity state request
         try {
-            componentClient
+            timeslot = componentClient
                     .forEventSourcedEntity(slotId)
                     .method(BookingSlotEntity::getSlot)
                     .invoke();
@@ -122,8 +125,7 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
             throw new RuntimeException(e);
         }
 
-        return new Timeslot(Collections.emptySet(),
-                Collections.emptySet());
+        return timeslot;
     }
 
     // Indicates that the supplied participant is available for booking
@@ -137,6 +139,9 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
             participantType = ParticipantType.valueOf(request.participantType().trim().toUpperCase());
         } catch (IllegalArgumentException ex) {
             log.warn("Bad participant type {}", request.participantType());
+            throw HttpException.badRequest("invalid participant type");
+        } catch (NullPointerException ex) {
+            log.warn("Null participant type");
             throw HttpException.badRequest("invalid participant type");
         }
 

@@ -5,79 +5,111 @@ import akka.javasdk.annotations.Component;
 import akka.javasdk.annotations.TypeName;
 import akka.javasdk.eventsourcedentity.EventSourcedEntity;
 import io.example.domain.Participant.ParticipantType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component(id = "participant-slot")
 public class ParticipantSlotEntity
                 extends EventSourcedEntity<ParticipantSlotEntity.State, ParticipantSlotEntity.Event> {
 
-        public Effect<Done> unmarkAvailable(ParticipantSlotEntity.Commands.UnmarkAvailable unmark) {
+        private static Logger logger = LoggerFactory.getLogger(ParticipantSlotEntity.class);
 
-                if (currentState() == null || !currentState().status().equals("marked-available")) {
-                    return effects().error("ParticipantSlot cannot be unmarked available.");
+        public Effect<Done> unmarkAvailable(ParticipantSlotEntity.Commands.UnmarkAvailable unmark) {
+                logger.info("Unmarking participant {} available for slot {}...", unmark.participantId, unmark.slotId);
+
+                if (currentState() == null) {
+                    logger.error("Slot {} doesn't exist.", unmark.slotId);
+                    return effects().reply(Done.getInstance());
+                } else {
+                    if (currentState().status().equals("unmarked-available")) {
+                        logger.warn("Participant {} already unmarked available for slot {}.", unmark.participantId, unmark.slotId);
+                        return effects().reply(Done.getInstance());
+                    }
+                    if (currentState().status().equals("booked")) {
+                        logger.warn("Participant {} is booked for slot {}. You must cancel reservation before unmarking availability.", unmark.participantId, unmark.slotId);
+                        return effects().reply(Done.getInstance());
+                    }
                 }
 
-                String slotId = unmark.slotId;
-                String participantId = unmark.participantId;
-                ParticipantType participantType = unmark.participantType;
-
-                var event = new ParticipantSlotEntity.Event.UnmarkedAvailable(slotId, participantId, participantType);
-
                 return effects()
-                        .persist(event)
-                        .thenReply(newState -> Done.getInstance());
+                        .persist(new ParticipantSlotEntity.Event.UnmarkedAvailable(
+                                unmark.slotId,
+                                unmark.participantId,
+                                unmark.participantType))
+                        .thenReply(__ -> Done.getInstance());
         }
 
         public Effect<Done> markAvailable(ParticipantSlotEntity.Commands.MarkAvailable mark) {
+                logger.info("Marking participant {} available for slot {}...", mark.participantId, mark.slotId);
 
-                if (currentState() == null || currentState().status().equals("marked-available")) {
-                    return effects().error("ParticipantSlot cannot be marked available.");
+                if (currentState() == null) {
+                    logger.error("Slot {} doesn't exist.", mark.slotId);
+                    return effects().reply(Done.getInstance());
+                } else {
+                    if (currentState().status().equals("marked-available")) {
+                        logger.warn("Participant {} already marked available for slot {}.", mark.participantId, mark.slotId);
+                        return effects().reply(Done.getInstance());
+                    }
+                    if (currentState().status().equals("booked")) {
+                        logger.warn("Participant {} has already been booked for slot {}.", mark.participantId, mark.slotId);
+                        return effects().reply(Done.getInstance());
+                    }
                 }
 
-                String slotId = mark.slotId;
-                String participantId = mark.participantId;
-                ParticipantType participantType = mark.participantType;
-
-                var event = new ParticipantSlotEntity.Event.MarkedAvailable(slotId, participantId, participantType);
-
                 return effects()
-                        .persist(event)
-                        .thenReply(newState -> Done.getInstance());
+                        .persist(new ParticipantSlotEntity.Event.MarkedAvailable(
+                                mark.slotId,
+                                mark.participantId,
+                                mark.participantType))
+                        .thenReply(__ -> Done.getInstance());
         }
 
         public Effect<Done> book(ParticipantSlotEntity.Commands.Book book) {
+                logger.info("Booking slot {} for participant {}", book.slotId, book.participantId);
 
-                if (currentState() == null || !currentState().status().equals("marked-available")) {
-                    return effects().error("ParticipantSlot cannot be booked.");
+                if (currentState() == null) {
+                    logger.error("Slot {} doesn't exist.", book.slotId);
+                    return effects().reply(Done.getInstance());
+                } else {
+                    if (currentState().status().equals("marked-unavailable")) {
+                        logger.warn("Participant {} unavailable for slot {}.", book.participantId, book.slotId);
+                        return effects().reply(Done.getInstance());
+                    }
+                    if (currentState().status().equals("booked")) {
+                        logger.warn("Participant {} has already been booked for slot {}. Booking ref is {}.", book.participantId, book.slotId, book.bookingId);
+                        return effects().reply(Done.getInstance());
+                    }
                 }
 
-                String slotId = book.slotId;
-                String participantId = book.participantId;
-                ParticipantType participantType = book.participantType;
-                String bookingId = book.bookingId;
-
-                var event = new ParticipantSlotEntity.Event.Booked(slotId, participantId, participantType, bookingId);
-
                 return effects()
-                        .persist(event)
-                        .thenReply(newState -> Done.getInstance());
+                        .persist(new ParticipantSlotEntity.Event.Booked(
+                                book.slotId,
+                                book.participantId,
+                                book.participantType,
+                                book.bookingId))
+                        .thenReply(__ -> Done.getInstance());
         }
 
         public Effect<Done> cancel(ParticipantSlotEntity.Commands.Cancel cancel) {
+            logger.info("Canceling slot {} for participant {}", cancel.slotId, cancel.participantId);
 
-                if (currentState() == null || !currentState().status().equals("booked")) {
-                    return effects().error("ParticipantSlot cannot be cancelled.");
+                if (currentState() == null) {
+                    logger.error("Slot doesn't exist.");
+                    return effects().reply(Done.getInstance());
                 }
 
-                var slotId = cancel.slotId;
-                String participantId = cancel.participantId;
-                ParticipantType participantType = cancel.participantType;
-                String bookingId = cancel.bookingId;
-
-                var event = new ParticipantSlotEntity.Event.Canceled(slotId, participantId, participantType, bookingId);
+                if (!currentState().status().equals("booked")) {
+                    logger.warn("Slot hasn't been booked yet.");
+                    return effects().reply(Done.getInstance());
+                }
 
                 return effects()
-                        .persist(event)
-                        .thenReply(newState -> Done.getInstance());
+                        .persist(new ParticipantSlotEntity.Event.Canceled(
+                                cancel.slotId,
+                                cancel.participantId,
+                                cancel.participantType,
+                                cancel.bookingId))
+                        .thenReply(__ -> Done.getInstance());
         }
 
         record State(
@@ -130,7 +162,7 @@ public class ParticipantSlotEntity
 
         @Override
         public ParticipantSlotEntity.State applyEvent(ParticipantSlotEntity.Event event) {
-                switch (event) {
+                return switch (event) {
                     case ParticipantSlotEntity.Event.MarkedAvailable evt ->
                         new State(evt.slotId, evt.participantId, evt.participantType, "marked-available");
                     case ParticipantSlotEntity.Event.UnmarkedAvailable evt ->
@@ -139,7 +171,7 @@ public class ParticipantSlotEntity
                             new State(evt.slotId, evt.participantId, evt.participantType, "booked");
                     case ParticipantSlotEntity.Event.Canceled evt ->
                             new State(evt.slotId, evt.participantId, evt.participantType, "canceled");
-                }
-                return null;
+                };
+//                return null;
         }
 }
