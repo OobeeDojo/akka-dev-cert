@@ -40,6 +40,8 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
     //TODO: error handling
     //TODO: invariants
     //TODO: check slotId format
+    //TODO: logging
+    //TODO: testing
 
     // Creates a new booking. All three identified participants will
     // be considered booked for the given timeslot, if they are all
