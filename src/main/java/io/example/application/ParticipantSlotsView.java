@@ -63,12 +63,12 @@ public class ParticipantSlotsView extends View {
     public record SlotList(List<SlotRow> slots) {
     }
 
-     @Query("SELECT * FROM slots_by_participant WHERE participantId = :participantId")
-    public QueryEffect<SlotList> getSlotsByParticipant(String participantId) {
-        return queryResult();
-    }
+//     @Query("SELECT participantId, slotId, status FROM slots_by_participant WHERE participantId = :participantId")
+//    public QueryEffect<SlotList> getSlotsByParticipant(String participantId) {
+//        return queryResult();
+//    }
 
-     @Query("SELECT * FROM slots_by_participant_and_status WHERE participantStatusInput = :input")
+     @Query("SELECT * AS slots FROM slots_by_participant_and_status WHERE participantId = :participantId AND status = :status")
     public QueryEffect<SlotList> getSlotsByParticipantAndStatus(ParticipantStatusInput input) {
         return queryResult();
     }
