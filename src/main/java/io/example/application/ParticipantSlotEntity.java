@@ -21,7 +21,7 @@ public class ParticipantSlotEntity
                     logger.error("Slot {} doesn't exist.", unmark.slotId);
                     return effects().reply(Done.getInstance());
                 } else {
-                    if (currentState().status().equals("unmarked-available")) {
+                    if (currentState().status().equals("unavailable")) {
                         logger.warn("Participant {} already unmarked available for slot {}.", unmark.participantId, unmark.slotId);
                         return effects().reply(Done.getInstance());
                     }
@@ -42,11 +42,8 @@ public class ParticipantSlotEntity
         public Effect<Done> markAvailable(ParticipantSlotEntity.Commands.MarkAvailable mark) {
                 logger.info("Marking participant {} available for slot {}...", mark.participantId, mark.slotId);
 
-                if (currentState() == null) {
-                    logger.error("Slot {} doesn't exist.", mark.slotId);
-                    return effects().reply(Done.getInstance());
-                } else {
-                    if (currentState().status().equals("marked-available")) {
+                if (currentState() != null) {
+                    if (currentState().status().equals("available")) {
                         logger.warn("Participant {} already marked available for slot {}.", mark.participantId, mark.slotId);
                         return effects().reply(Done.getInstance());
                     }
@@ -71,7 +68,7 @@ public class ParticipantSlotEntity
                     logger.error("Slot {} doesn't exist.", book.slotId);
                     return effects().reply(Done.getInstance());
                 } else {
-                    if (currentState().status().equals("marked-unavailable")) {
+                    if (currentState().status().equals("unavailable")) {
                         logger.warn("Participant {} unavailable for slot {}.", book.participantId, book.slotId);
                         return effects().reply(Done.getInstance());
                     }
@@ -164,13 +161,13 @@ public class ParticipantSlotEntity
         public ParticipantSlotEntity.State applyEvent(ParticipantSlotEntity.Event event) {
                 return switch (event) {
                     case ParticipantSlotEntity.Event.MarkedAvailable evt ->
-                        new State(evt.slotId, evt.participantId, evt.participantType, "marked-available");
+                        new State(evt.slotId, evt.participantId, evt.participantType, "available");
                     case ParticipantSlotEntity.Event.UnmarkedAvailable evt ->
-                        new State(evt.slotId, evt.participantId, evt.participantType, "marked-unavailable");
+                        new State(evt.slotId, evt.participantId, evt.participantType, "unavailable");
                     case ParticipantSlotEntity.Event.Booked evt ->
                             new State(evt.slotId, evt.participantId, evt.participantType, "booked");
                     case ParticipantSlotEntity.Event.Canceled evt ->
-                            new State(evt.slotId, evt.participantId, evt.participantType, "canceled");
+                            new State(evt.slotId, evt.participantId, evt.participantType, "available");
                 };
 //                return null;
         }

@@ -1,0 +1,15 @@
+curl -v -H "Content-Type: application/json" -X POST -d '{"participantId": "alice", "participantType": "student"}' localhost:9000/flight/availability/2025-06-10-10
+
+curl -v -H "Content-Type: application/json" -X POST -d '{"participantId": "superplane", "participantType": "aircraft"}' localhost:9000/flight/availability/2025-06-10-10
+
+curl -v -H "Content-Type: application/json" -X POST -d '{"participantId": "superteacher", "participantType": "instructor"}' localhost:9000/flight/availability/2025-06-10-10
+
+echo "Retrieving availability..."
+
+curl -H "Content-Type: application/json" localhost:9000/flight/availability/2025-06-10-10
+
+echo "Booking..."
+curl -v -H "Content-Type: application/json" localhost:9000/flight/bookings/2025-06-10-10 -d '{"bookingId": "booking4", "aircraftId": "superplane", "instructorId": "superteacher", "studentId": "alice"}'
+
+echo "Retrieving availability..."
+curl -H "Content-Type: application/json" localhost:9000/flight/availability/2025-06-10-10
