@@ -37,6 +37,9 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
     public FlightEndpoint(ComponentClient componentClient) {
         this.componentClient = componentClient;
     }
+    //TODO: error handling
+    //TODO: invariants
+    //TODO: check slotId format
 
     // Creates a new booking. All three identified participants will
     // be considered booked for the given timeslot, if they are all
@@ -59,14 +62,18 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
         }
 
         try {
+            log.info("Calling FlightConditionsAgent for booking slot {}", slotId);
             var sessionId = UUID.randomUUID().toString();
             var agentJudgement = componentClient
                     .forAgent()
                     .inSession(sessionId)
                     .method(FlightConditionsAgent::query)
                     .invoke(slotId);
+
+            log.info("AgentJudgement: {}", agentJudgement);
+
             if (!agentJudgement.meetsRequirements()) {
-                 return HttpResponses.badRequest("Weather conditions are unsuitable. Cannot create booking.");
+                return HttpResponses.badRequest("Weather conditions are unsuitable. Cannot create booking.");
             }
         } catch (RateLimitException |
                  ModelTimeoutException |
@@ -78,6 +85,7 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
 
 
         try {
+            log.info("Booking slot {} for {}", bookingId, request);
             componentClient
                     .forEventSourcedEntity(slotId)
                     .method(BookingSlotEntity::bookSlot)
